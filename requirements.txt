@@ -1,0 +1,5 @@
+pyasn1==0.6.0
+PySimpleGUI==5.0.4
+rsa==4.9
+segno==1.6.1
+tk==0.1.0
