@@ -1,4 +1,8 @@
+pillow==10.3.0
 pyasn1==0.6.0
+PyQt5==5.15.10
+PyQt5-Qt5==5.15.13
+PyQt5-sip==12.13.0
 PySimpleGUI==5.0.4
 rsa==4.9
 segno==1.6.1
