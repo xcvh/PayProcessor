@@ -1,6 +1,7 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel, QLineEdit, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel, QLineEdit, QPushButton, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import Qt
 import sqlite3
 import segno.helpers
 
@@ -84,15 +85,21 @@ class MyApp(QWidget):
                            amount REAL,
                            reference TEXT)''')
 
-        cursor.execute('SELECT id, name, iban FROM entries')
+        cursor.execute('SELECT id, name, iban, amount, reference FROM entries')
         entries = cursor.fetchall()
         connection.close()
 
         for entry in entries:
-            self.list_widget.addItem(f'{entry[0]}: {entry[1]} ({entry[2]})')
+            display_text = f'{entry[1]}: {entry[2]} ({entry[3]}: {entry[4]})'
+            item = QListWidgetItem(display_text)
+            item.setData(Qt.UserRole, entry[0])  # Store the ID as user data
+            self.list_widget.addItem(item)
 
     def load_selected_entry(self, item):
-        entry_id = int(item.text().split(':')[0])
+        entry_id = item.data(Qt.UserRole)  # Retrieve the ID from the item's data
+        if entry_id is None:
+            print("No ID associated with the selected item")
+            return
 
         connection = sqlite3.connect('entries.db')
         cursor = connection.cursor()
@@ -116,14 +123,7 @@ class MyApp(QWidget):
 
         connection = sqlite3.connect('entries.db')
         cursor = connection.cursor()
-        
-        selected_item = self.list_widget.currentItem()
-        if selected_item:
-            entry_id = int(selected_item.text().split(':')[0])
-            cursor.execute('UPDATE entries SET name=?, iban=?, amount=?, reference=? WHERE id=?', (name, iban, amount, reference, entry_id))
-        else:
-            cursor.execute('INSERT INTO entries (name, iban, amount, reference) VALUES (?, ?, ?, ?)', (name, iban, amount, reference))
-
+        cursor.execute('INSERT INTO entries (name, iban, amount, reference) VALUES (?, ?, ?, ?)', (name, iban, amount, reference))
         connection.commit()
         connection.close()
 
@@ -133,7 +133,10 @@ class MyApp(QWidget):
     def delete_entry(self):
         selected_item = self.list_widget.currentItem()
         if selected_item:
-            entry_id = int(selected_item.text().split(':')[0])
+            entry_id = selected_item.data(Qt.UserRole)  # Retrieve the ID from the item's data
+            if entry_id is None:
+                print("No ID associated with the selected item")
+                return
 
             connection = sqlite3.connect('entries.db')
             cursor = connection.cursor()
