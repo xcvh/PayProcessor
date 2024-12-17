@@ -1,17 +1,30 @@
+import os
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel, QLineEdit, QPushButton, QFileDialog, QListWidgetItem
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel, QLineEdit, QPushButton, QFileDialog, QListWidgetItem
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
 import sqlite3
 import segno.helpers
 
+def get_app_support_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.join(os.path.expanduser('~/Library/Application Support'), 'PayPyQR')
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
+
+def get_database_path():
+    app_support_path = get_app_support_path()
+    os.makedirs(app_support_path, exist_ok=True)
+    return os.path.join(app_support_path, 'entries.db')
+
 class MyApp(QWidget):
     def __init__(self):
+        self.db_path = get_database_path()
         super().__init__()
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('Entry Manager')
+        self.setWindowTitle('PayPyQR')
         self.setGeometry(100, 100, 600, 400)
 
         self.list_widget = QListWidget()
@@ -40,6 +53,8 @@ class MyApp(QWidget):
         self.button_save_qr.clicked.connect(self.save_qr)
 
         self.qr_label = QLabel()
+        self.qr_label.setFixedSize(200, 200)
+        self.qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText('Search...')
@@ -75,7 +90,7 @@ class MyApp(QWidget):
     def load_entries(self):
         self.list_widget.clear()
 
-        connection = sqlite3.connect('entries.db')
+        connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS entries
@@ -92,16 +107,16 @@ class MyApp(QWidget):
         for entry in entries:
             display_text = f'{entry[1]}: {entry[2]} ({entry[3]}: {entry[4]})'
             item = QListWidgetItem(display_text)
-            item.setData(Qt.UserRole, entry[0])  # Store the ID as user data
+            item.setData(Qt.ItemDataRole.UserRole, entry[0])  # Use Qt.ItemDataRole.UserRole instead of magic number
             self.list_widget.addItem(item)
 
     def load_selected_entry(self, item):
-        entry_id = item.data(Qt.UserRole)  # Retrieve the ID from the item's data
+        entry_id = item.data(Qt.ItemDataRole.UserRole)  # Use Qt.ItemDataRole.UserRole
         if entry_id is None:
             print("No ID associated with the selected item")
             return
 
-        connection = sqlite3.connect('entries.db')
+        connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
         cursor.execute('SELECT name, iban, amount, reference FROM entries WHERE id = ?', (entry_id,))
         entry = cursor.fetchone()
@@ -121,7 +136,7 @@ class MyApp(QWidget):
         amount = float(self.textbox_amount.text())
         reference = self.textbox_reference.text()
 
-        connection = sqlite3.connect('entries.db')
+        connection = sqlite3.connect(self.db_path)
         cursor = connection.cursor()
         cursor.execute('INSERT INTO entries (name, iban, amount, reference) VALUES (?, ?, ?, ?)', (name, iban, amount, reference))
         connection.commit()
@@ -133,12 +148,12 @@ class MyApp(QWidget):
     def delete_entry(self):
         selected_item = self.list_widget.currentItem()
         if selected_item:
-            entry_id = selected_item.data(Qt.UserRole)  # Retrieve the ID from the item's data
+            entry_id = selected_item.data(Qt.ItemDataRole.UserRole)  # Use Qt.ItemDataRole.UserRole
             if entry_id is None:
                 print("No ID associated with the selected item")
                 return
 
-            connection = sqlite3.connect('entries.db')
+            connection = sqlite3.connect(self.db_path)
             cursor = connection.cursor()
             cursor.execute('DELETE FROM entries WHERE id = ?', (entry_id,))
             connection.commit()
@@ -147,26 +162,51 @@ class MyApp(QWidget):
             self.load_entries()
 
     def update_qr_code(self):
-        name = self.textbox_name.text()
-        iban = self.textbox_iban.text()
-        amount = float(self.textbox_amount.text())
-        reference = self.textbox_reference.text()
+        try:
+            name = self.textbox_name.text() or ''
+            iban = self.textbox_iban.text() or ''
+            reference = self.textbox_reference.text() or ''
+            qr_save_path = os.path.join(get_app_support_path(), 'qr.png')
 
-        qr_code = segno.helpers.make_epc_qr(name=name, iban=iban, amount=amount, text=reference)
-        qr_code.save('qr.png', scale=10)
+            # Handle amount carefully
+            try:
+                amount = float(self.textbox_amount.text() or '0')
+            except ValueError:
+                amount = 0.0
 
-        qr_pixmap = QPixmap('qr.png')
-        self.qr_label.setPixmap(qr_pixmap)
+            # Only generate QR if essential details are present
+            if name and iban:
+                qr_code = segno.helpers.make_epc_qr(
+                    name=name,
+                    iban=iban,
+                    amount=amount,
+                    text=reference or None  # Use None if reference is empty
+                )
+                qr_code.save(qr_save_path, scale=10)
+
+                qr_pixmap = QPixmap(qr_save_path)
+
+                if not qr_pixmap.isNull():
+                    scaled_pixmap = qr_pixmap.scaled(
+                        self.qr_label.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.qr_label.setPixmap(scaled_pixmap)
+            else:
+                # Clear the QR code label if insufficient information
+                self.qr_label.clear()
+        except Exception as e:
+            print(f"Error generating QR code: {e}")
+            self.qr_label.clear()
 
     def filter_entries(self):
         search_query = self.search_input.text().lower()
         for index in range(self.list_widget.count()):
             item = self.list_widget.item(index)
-            entry_text = item.text().lower()
-            if search_query in entry_text:
-                item.setHidden(False)
-            else:
-                item.setHidden(True)
+            if item is not None:  # Sicherstellen, dass item nicht None ist
+                entry_text = item.text().lower() if item.text() else ""
+                item.setHidden(search_query not in entry_text)
 
     def save_qr(self):
         default_filename = f'{self.textbox_name.text().replace(" ", "_")}_PayPyQR.png'
@@ -174,10 +214,16 @@ class MyApp(QWidget):
         if file_path:
             qr_pixmap = self.qr_label.pixmap()
             # Save the QR code pixmap with better quality settings (HD)
-            qr_pixmap.save(file_path, 'PNG', quality=100)
+            if qr_pixmap is not None:
+                qr_pixmap.save(file_path, 'PNG', quality=100)
+            else:
+                print("No QR code to save.")
 
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     myapp = MyApp()
     myapp.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
+
+if __name__ == '__main__':
+    main()
