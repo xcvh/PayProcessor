@@ -1,6 +1,6 @@
 from setuptools import setup
 
-APP = ['app.py']
+APP = ['src/main.py']
 DATA_FILES = [
     ('', ['icon.icns']),  # Add your icon file
 ]
@@ -10,8 +10,8 @@ OPTIONS = {
     'excludes': ['Carbon', 'AppKit', 'Tkinter', 'test'],
     'plist': {
         'CFBundleName': 'PayPyQR',
-        'CFBundleShortVersionString': '1.1.0',
-        'CFBundleVersion': '1.1.0',
+        'CFBundleShortVersionString': '1.2.0',
+        'CFBundleVersion': '1.2.0',
         'CFBundleIdentifier': 'com.xcvh.paypyqr',
         'NSHumanReadableCopyright': 'No © 2024 Jeldo Meppen',
         'CFBundleSupportedPlatforms': ['MacOSX'],
