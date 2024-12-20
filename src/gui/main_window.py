@@ -1,9 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication
-from existing_tab import ExistingTab
-from excel_tab import ExcelTab
-import sys
-
+from src.gui.excel_processor import ExcelProcessor
 from src.gui.qr_payments import QRPayments
+import sys
 
 class MainWindow(QMainWindow):
     def __init__(self):
