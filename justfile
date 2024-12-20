@@ -6,3 +6,6 @@ rebuild: remove-old-build
 
 build:
     python setup.py py2app
+
+debug:
+    ./dist/PayPyQR.app/Contents/MacOS/PayPyQR
