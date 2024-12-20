@@ -23,3 +23,16 @@ class Recipient:
     id: Optional[int]
     name: str
     ibans: List[IBAN] = None
+
+# Form data classes for UI operations
+@dataclass
+class PaymentFormData:
+    amount: float
+    reference: str
+    iban: str = ""
+    recipient_name: str = ""
+
+@dataclass
+class RecipientFormData:
+    name: str
+    iban: str

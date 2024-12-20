@@ -1,26 +1,81 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel,
-    QPushButton, QFileDialog, QListWidgetItem, QSplitter
+    QPushButton, QFileDialog, QListWidgetItem, QSplitter,
+    QLineEdit, QDialog, QFormLayout, QMessageBox, QDoubleSpinBox
 )
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 from datetime import date
 from pathlib import Path
 
-from src.models.models import Recipient, IBAN, Payment
+from src.models.models import (
+    Recipient, IBAN, Payment,
+    PaymentFormData, RecipientFormData  # New imports
+)
 from src.database.database_manager import DatabaseManager
 from src.services.qr_generator import QRGenerator
 from src.utils.path_manager import PathManager
 
-class MainWindow(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.db_manager = DatabaseManager(PathManager.get_database_path())
-        self.qr_generator = QRGenerator()
-        self.current_recipient = None
-        self.current_iban = None
-        self.current_payment = None
-        self.init_ui()
+class NewPaymentDialog(QDialog):
+    def __init__(self, parent=None, recipient_name="", iban=""):
+        super().__init__(parent)
+        self.setWindowTitle("New Payment")
+        layout = QFormLayout(self)
+
+        # If recipient and IBAN are provided, show them as read-only
+        if recipient_name:
+            self.recipient_name = QLineEdit(recipient_name)
+            self.recipient_name.setReadOnly(True)
+            layout.addRow("Recipient:", self.recipient_name)
+
+        if iban:
+            self.iban_input = QLineEdit(iban)
+            self.iban_input.setReadOnly(True)
+        else:
+            self.iban_input = QLineEdit()
+        layout.addRow("IBAN:", self.iban_input)
+
+        self.amount_input = QDoubleSpinBox()
+        self.amount_input.setMaximum(999999.99)
+        self.amount_input.setDecimals(2)
+        layout.addRow("Amount:", self.amount_input)
+
+        self.reference_input = QLineEdit()
+        layout.addRow("Reference:", self.reference_input)
+
+        self.button_box = QPushButton("Create Payment")
+        self.button_box.clicked.connect(self.accept)
+        layout.addRow(self.button_box)
+
+    def get_payment_data(self) -> PaymentFormData:  # Updated return type
+        return PaymentFormData(
+            amount=self.amount_input.value(),
+            reference=self.reference_input.text(),
+            iban=self.iban_input.text(),
+            recipient_name=getattr(self, 'recipient_name', QLineEdit()).text()
+        )
+
+class NewRecipientDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("New Recipient")
+        layout = QFormLayout(self)
+
+        self.name_input = QLineEdit()
+        layout.addRow("Name:", self.name_input)
+
+        self.iban_input = QLineEdit()
+        layout.addRow("Initial IBAN:", self.iban_input)
+
+        self.button_box = QPushButton("Create Recipient")
+        self.button_box.clicked.connect(self.accept)
+        layout.addRow(self.button_box)
+
+    def get_recipient_data(self) -> RecipientFormData:  # Updated return type
+        return RecipientFormData(
+            name=self.name_input.text(),
+            iban=self.iban_input.text()
+        )
 
     def init_ui(self):
         self.setWindowTitle('PayPyQR')
@@ -34,13 +89,20 @@ class MainWindow(QWidget):
         self.ibans_list = QListWidget()
         self.payments_list = QListWidget()
 
+        # Create search box
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search recipients...")
+
         # Create QR display
         self.qr_label = QLabel()
         self.qr_label.setFixedSize(200, 200)
         self.qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Create save QR button
+        # Create buttons
         self.button_save_qr = QPushButton('Save QR Code')
+        self.button_new_recipient = QPushButton('New Recipient')
+        self.button_new_payment = QPushButton('New Payment')
+        self.button_add_iban = QPushButton('Add IBAN')
 
         # Create splitter for main layout
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -49,7 +111,9 @@ class MainWindow(QWidget):
         recipients_widget = QWidget()
         recipients_layout = QVBoxLayout(recipients_widget)
         recipients_layout.addWidget(QLabel("Recipients"))
+        recipients_layout.addWidget(self.search_input)
         recipients_layout.addWidget(self.recipients_list)
+        recipients_layout.addWidget(self.button_new_recipient)
 
         # Right panel - IBANs and Payments
         right_panel = QWidget()
@@ -60,12 +124,14 @@ class MainWindow(QWidget):
         ibans_layout = QVBoxLayout(ibans_widget)
         ibans_layout.addWidget(QLabel("IBANs"))
         ibans_layout.addWidget(self.ibans_list)
+        ibans_layout.addWidget(self.button_add_iban)
 
         # Payments section
         payments_widget = QWidget()
         payments_layout = QVBoxLayout(payments_widget)
         payments_layout.addWidget(QLabel("Payments"))
         payments_layout.addWidget(self.payments_list)
+        payments_layout.addWidget(self.button_new_payment)
 
         # Add IBANs and Payments to right layout
         right_layout.addWidget(ibans_widget)
@@ -99,6 +165,74 @@ class MainWindow(QWidget):
         self.ibans_list.itemClicked.connect(self.load_iban_payments)
         self.payments_list.itemClicked.connect(self.load_payment_qr)
         self.button_save_qr.clicked.connect(self.save_qr)
+        self.search_input.textChanged.connect(self.search_recipients)
+        self.button_new_recipient.clicked.connect(self.show_new_recipient_dialog)
+        self.button_new_payment.clicked.connect(self.show_new_payment_dialog)
+        self.button_add_iban.clicked.connect(self.show_add_iban_dialog)
+
+    def search_recipients(self):
+        query = self.search_input.text()
+        if query:
+            recipients = self.db_manager.search_recipients(query)
+        else:
+            recipients = self.db_manager.get_all_recipients()
+
+        self.recipients_list.clear()
+        for recipient in recipients:
+            item = QListWidgetItem(recipient.name)
+            item.setData(Qt.ItemDataRole.UserRole, recipient.id)
+            self.recipients_list.addItem(item)
+
+    def show_new_recipient_dialog(self):
+        dialog = NewRecipientDialog(self)
+        if dialog.exec():
+            name = dialog.name_input.text()
+            iban = dialog.iban_input.text()
+            if name and iban:
+                recipient_id = self.db_manager.add_recipient(name)
+                if recipient_id:
+                    self.db_manager.add_iban(iban, recipient_id)
+                    self.load_recipients()
+
+    def show_add_iban_dialog(self):
+        if not self.current_recipient:
+            QMessageBox.warning(self, "Warning", "Please select a recipient first")
+            return
+
+        iban, ok = QLineEdit.getText(self, "Add IBAN", "Enter new IBAN:")
+        if ok and iban:
+            self.db_manager.add_iban(iban, self.current_recipient.id)
+            self.load_recipient_data(self.recipients_list.currentItem())
+
+    def show_new_payment_dialog(self):
+        recipient_name = ""
+        iban = ""
+        iban_id = None
+
+        if self.current_iban:
+            iban = self.current_iban.iban
+            iban_id = self.current_iban.id
+            recipient_name = self.current_recipient.name
+        elif self.current_recipient:
+            recipient_name = self.current_recipient.name
+
+        dialog = NewPaymentDialog(self, recipient_name, iban)
+        if dialog.exec():
+            amount = dialog.amount_input.value()
+            reference = dialog.reference_input.text()
+
+            if not iban_id:
+                iban = dialog.iban_input.text()
+                # Find or create IBAN
+                if self.current_recipient:
+                    iban_id = self.db_manager.add_iban(iban, self.current_recipient.id)
+
+            if iban_id:
+                self.db_manager.add_payment(amount, reference, iban_id)
+                if self.current_iban:
+                    self.load_iban_payments(self.ibans_list.currentItem())
+                elif self.current_recipient:
+                    self.load_recipient_data(self.recipients_list.currentItem())
 
     def load_recipients(self):
         self.recipients_list.clear()
