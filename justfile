@@ -8,6 +8,6 @@ build:
     python setup.py py2app
 
 debug:
-    ./dist/PayPyQR.app/Contents/MacOS/PayPyQR
+    ./dist/PayProcessor.app/Contents/MacOS/PayProcessor
 
 test: rebuild debug

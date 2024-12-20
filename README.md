@@ -1,4 +1,4 @@
-## PayPyQR v1.1.0
+## PayProcessor v1.1.0
 
 ### Features
 - Easily manage payment entries
@@ -8,7 +8,7 @@
 ### Installation
 1. Download the .app file
 2. Drag to Applications folder
-3. First launch will create a new database in ~/Library/Application Support/PayPyQR/
+3. First launch will create a new database in ~/Library/Application Support/PayProcessor/
 
 ### System Requirements
 - macOS 10.15+ (Catalina)

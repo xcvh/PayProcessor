@@ -80,7 +80,8 @@ class NewRecipientDialog(QDialog):
 class QRPayments(QWidget):
     def __init__(self):
         super().__init__()
-        self.db_manager = DatabaseManager(PathManager.get_database_path())
+        self.path_manager = PathManager()  # Create an instance
+        self.db_manager = DatabaseManager(self.path_manager.database_path)  # Use the property
         self.qr_generator = QRGenerator()
         self.current_recipient = None
         self.current_iban = None
@@ -88,7 +89,7 @@ class QRPayments(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle('PayPyQR')
+        self.setWindowTitle('PayProcessor')
         self.setGeometry(100, 100, 800, 600)
 
         # Create main layout
@@ -309,7 +310,7 @@ class QRPayments(QWidget):
             return
 
         try:
-            qr_path = PathManager.get_temp_qr_path()
+            qr_path = self.path_manager.get_new_temp_qr_path()
             # Note: You'll need to update your QR generator to work with the new data structure
             if self.qr_generator.generate_qr({
                 'name': self.current_recipient.name,
@@ -337,7 +338,7 @@ class QRPayments(QWidget):
 
         today = date.today()
         downloads_path = Path.home() / 'Downloads'
-        default_filename = f'PayPyQR_{self.current_recipient.name.replace(" ", "_")}_{today}.png'
+        default_filename = f'PayProcessor_{self.current_recipient.name.replace(" ", "_")}_{today}.png'
         default_savepath = str(downloads_path / default_filename)
 
         file_path, _ = QFileDialog.getSaveFileName(
