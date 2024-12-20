@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel,
+    QInputDialog, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLabel,
     QPushButton, QFileDialog, QListWidgetItem, QSplitter,
     QLineEdit, QDialog, QFormLayout, QMessageBox, QDoubleSpinBox
 )
@@ -76,6 +76,16 @@ class NewRecipientDialog(QDialog):
             name=self.name_input.text(),
             iban=self.iban_input.text()
         )
+
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.db_manager = DatabaseManager(PathManager.get_database_path())
+        self.qr_generator = QRGenerator()
+        self.current_recipient = None
+        self.current_iban = None
+        self.current_payment = None
+        self.init_ui()
 
     def init_ui(self):
         self.setWindowTitle('PayPyQR')
@@ -199,7 +209,7 @@ class NewRecipientDialog(QDialog):
             QMessageBox.warning(self, "Warning", "Please select a recipient first")
             return
 
-        iban, ok = QLineEdit.getText(self, "Add IBAN", "Enter new IBAN:")
+        iban, ok = QInputDialog.getText(self, "Add IBAN", "Enter new IBAN:")
         if ok and iban:
             self.db_manager.add_iban(iban, self.current_recipient.id)
             self.load_recipient_data(self.recipients_list.currentItem())
