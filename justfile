@@ -9,3 +9,5 @@ build:
 
 debug:
     ./dist/PayPyQR.app/Contents/MacOS/PayPyQR
+
+test: rebuild debug
