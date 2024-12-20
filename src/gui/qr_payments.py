@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 
 from src.models.models import (
-    Recipient, IBAN, Payment,
+    Payment,
     PaymentFormData, RecipientFormData  # New imports
 )
 from src.database.database_manager import DatabaseManager

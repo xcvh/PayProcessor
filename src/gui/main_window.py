@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QApplication
-from src.gui.excel_processor import ExcelProcessor
+from src.gui.excel_processor import ExcelProcessorGUI
 from src.gui.qr_payments import QRPayments
 import sys
 
@@ -14,8 +14,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         # Add tabs
-        self.tabs.addTab(QRPayments(), "EPC QR Code Generator")
-        self.tabs.addTab(ExcelProcessor(), "Excel Processing")
+        self.tabs.addTab(QRPayments(), "Generate QR Code for Payments")
+        self.tabs.addTab(ExcelProcessorGUI(), "Extract Invoices from ClickUp Export")
 
         # Status bar
         self.statusBar().showMessage("Ready")

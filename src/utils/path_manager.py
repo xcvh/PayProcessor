@@ -1,5 +1,4 @@
 # src/utils/path_manager.py
-import os
 import sys
 from pathlib import Path
 
