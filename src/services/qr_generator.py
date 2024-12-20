@@ -1,7 +1,6 @@
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 import segno.helpers
-from src.models.models import Payment, IBAN, Recipient
 
 class QRGenerator:
     @staticmethod

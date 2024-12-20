@@ -26,10 +26,10 @@ OPTIONS = {
     ],
     'excludes': ['Carbon', 'AppKit', 'Tkinter', 'test'],
     'plist': {
-        'CFBundleName': 'PayPyQR',
+        'CFBundleName': 'PayProcessor',
         'CFBundleShortVersionString': '1.2.0',
         'CFBundleVersion': '1.2.0',
-        'CFBundleIdentifier': 'com.xcvh.paypyqr',
+        'CFBundleIdentifier': 'com.xcvh.PayProcessor',
         'NSHumanReadableCopyright': 'No © 2024 Jeldo Meppen',
         'CFBundleSupportedPlatforms': ['MacOSX'],
         'CFBundleIconFile': 'icon.icns',
@@ -38,7 +38,7 @@ OPTIONS = {
 }
 
 setup(
-    name='PayPyQR',
+    name='PayProcessor',
     version='1.2.0',
     packages=find_packages(),
     package_dir={'': '.'},

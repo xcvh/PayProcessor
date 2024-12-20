@@ -8,7 +8,7 @@ import segno.helpers
 
 def get_app_support_path():
     if getattr(sys, 'frozen', False):
-        return os.path.join(os.path.expanduser('~/Library/Application Support'), 'PayPyQR')
+        return os.path.join(os.path.expanduser('~/Library/Application Support'), 'PayProcessor')
     else:
         return os.path.dirname(os.path.abspath(__file__))
 
@@ -24,7 +24,7 @@ class MyApp(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle('PayPyQR')
+        self.setWindowTitle('PayProcessor')
         self.setGeometry(100, 100, 600, 400)
 
         self.list_widget = QListWidget()
@@ -209,7 +209,7 @@ class MyApp(QWidget):
                 item.setHidden(search_query not in entry_text)
 
     def save_qr(self):
-        default_filename = f'{self.textbox_name.text().replace(" ", "_")}_PayPyQR.png'
+        default_filename = f'{self.textbox_name.text().replace(" ", "_")}_PayProcessor.png'
         file_path, _ = QFileDialog.getSaveFileName(self, 'Save QR Code', default_filename, 'Images (*.png)')
         if file_path:
             qr_pixmap = self.qr_label.pixmap()
