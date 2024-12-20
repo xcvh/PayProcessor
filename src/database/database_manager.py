@@ -2,7 +2,7 @@
 import sqlite3
 from typing import List, Optional
 from pathlib import Path
-from ..models.entry import Entry
+from src.models.entry import Entry
 
 class DatabaseManager:
     def __init__(self, db_path: Path):

@@ -8,10 +8,10 @@ from PyQt6.QtCore import Qt
 from datetime import date
 from pathlib import Path
 
-from ..models.entry import Entry
-from ..database.database_manager import DatabaseManager
-from ..services.qr_generator import QRGenerator
-from ..utils.path_manager import PathManager
+from src.models.entry import Entry
+from src.database.database_manager import DatabaseManager
+from src.services.qr_generator import QRGenerator
+from src.utils.path_manager import PathManager
 
 class MainWindow(QWidget):
     def __init__(self):

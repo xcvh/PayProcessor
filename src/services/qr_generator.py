@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Optional
 import segno.helpers
-from ..models.entry import Entry
+from src.models.entry import Entry
 
 class QRGenerator:
     @staticmethod

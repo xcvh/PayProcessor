@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 APP = ['src/main.py']
 DATA_FILES = [
@@ -23,6 +23,7 @@ OPTIONS = {
 setup(
     app=APP,
     data_files=DATA_FILES,
+    packages=find_packages(),
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
 )
