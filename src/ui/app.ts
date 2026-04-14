@@ -96,12 +96,10 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
   header.querySelector<HTMLInputElement>('#import-input')!.addEventListener('change', async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
-    if (!confirm('Importing will replace all current data. Continue?')) return
     const buffer = await file.arrayBuffer()
     await db.importBinary(new Uint8Array(buffer))
     recipientsPanel.refresh()
     ibansPanel.clear()
     paymentsPanel.clear()
-    alert('Database imported successfully.')
   })
 }
