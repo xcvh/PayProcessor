@@ -95,7 +95,7 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
   // -- Import dialog --
   const importDialog = document.createElement('dialog')
   importDialog.innerHTML = `
-    <div class="p-6 space-y-4 w-80">
+    <div class="p-6 space-y-4">
       <h2 class="text-lg font-semibold text-gray-900">Import Database</h2>
       <p class="text-sm text-gray-500">How should the imported data be handled?</p>
       <div class="space-y-2">
