@@ -83,7 +83,7 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
   // -- Export --
   header.querySelector('#export-btn')!.addEventListener('click', () => {
     const data = db.exportBinary()
-    const blob = new Blob([data], { type: 'application/octet-stream' })
+    const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

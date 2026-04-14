@@ -5,15 +5,17 @@ import type { Recipient, IBAN, Payment } from '../models/types'
 
 export class DatabaseManager {
   private db: Database
+  private SQL: SqlJsStatic
 
-  private constructor(db: Database) {
+  private constructor(db: Database, SQL: SqlJsStatic) {
     this.db = db
+    this.SQL = SQL
   }
 
   static async create(SQL: SqlJsStatic): Promise<DatabaseManager> {
     const stored = await loadDb()
     const db = stored ? new SQL.Database(stored) : new SQL.Database()
-    const manager = new DatabaseManager(db)
+    const manager = new DatabaseManager(db, SQL)
     if (!stored) {
       manager.db.run(SCHEMA_SQL)
       await manager.persist()
@@ -128,8 +130,7 @@ export class DatabaseManager {
 
   async importBinary(data: Uint8Array): Promise<void> {
     this.db.close()
-    const SQL = (this.db as unknown as { _SQL: SqlJsStatic })._SQL
-    this.db = new SQL.Database(data)
+    this.db = new this.SQL.Database(data)
     this.db.run('PRAGMA foreign_keys = ON')
     await this.persist()
   }
