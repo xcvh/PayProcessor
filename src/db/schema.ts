@@ -1,0 +1,25 @@
+export const SCHEMA_SQL = `
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS recipients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS ibans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  iban TEXT NOT NULL,
+  recipient_id INTEGER NOT NULL,
+  FOREIGN KEY (recipient_id) REFERENCES recipients (id) ON DELETE CASCADE,
+  UNIQUE (iban, recipient_id)
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  amount REAL NOT NULL,
+  reference TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  iban_id INTEGER NOT NULL,
+  FOREIGN KEY (iban_id) REFERENCES ibans (id) ON DELETE CASCADE
+);
+`
