@@ -157,8 +157,14 @@ export function createIbansPanel(
     selectedId = null
     ibans = db.getIbansForRecipient(recipient.id)
     addBtn.classList.remove('hidden')
-    onIbanDeselected()
     render()
+    if (ibans.length > 0) {
+      selectedId = ibans[0].id
+      render()
+      onIbanSelected(ibans[0], currentRecipient)
+    } else {
+      onIbanDeselected()
+    }
   }
 
   const clear = () => {
