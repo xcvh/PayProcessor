@@ -11,7 +11,7 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
   const header = document.createElement('header')
   header.className = 'bg-white border-b border-gray-200 sticky top-0 z-10'
   header.innerHTML = `
-    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div class="px-6 h-14 flex items-center justify-between w-full">
       <div class="flex items-center gap-2.5">
         <div class="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center">
           <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
 
   // -- Main content --
   const main = document.createElement('main')
-  main.className = 'max-w-7xl mx-auto px-4 py-5 h-[calc(100vh-3.5rem)]'
+  main.className = 'px-6 py-5 h-[calc(100vh-3.5rem)]'
 
   const workspace = document.createElement('div')
   workspace.className = 'flex gap-4 h-full'

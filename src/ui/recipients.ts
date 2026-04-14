@@ -72,7 +72,7 @@ export function createRecipientsPanel(
   onRecipientDeselected: () => void
 ): { element: HTMLElement; refresh: () => void } {
   const panel = document.createElement('div')
-  panel.className = 'panel w-72 shrink-0'
+  panel.className = 'panel w-96 shrink-0'
   panel.innerHTML = `
     <div class="panel-header">
       <span class="panel-title">Recipients</span>
