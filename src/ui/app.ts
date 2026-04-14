@@ -92,14 +92,76 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
     URL.revokeObjectURL(url)
   })
 
-  // -- Import --
-  header.querySelector<HTMLInputElement>('#import-input')!.addEventListener('change', async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0]
-    if (!file) return
-    const buffer = await file.arrayBuffer()
-    await db.importBinary(new Uint8Array(buffer))
+  // -- Import dialog --
+  const importDialog = document.createElement('dialog')
+  importDialog.innerHTML = `
+    <div class="p-6 space-y-4 w-80">
+      <h2 class="text-lg font-semibold text-gray-900">Import Database</h2>
+      <p class="text-sm text-gray-500">How should the imported data be handled?</p>
+      <div class="space-y-2">
+        <button id="import-merge" class="w-full text-left px-4 py-3 rounded-xl border-2 border-brand-500 bg-brand-50 hover:bg-brand-100 transition-colors">
+          <div class="font-medium text-brand-700 text-sm">Merge</div>
+          <div class="text-xs text-gray-500 mt-0.5">Add new entries from the file, keep existing data</div>
+        </button>
+        <button id="import-replace" class="w-full text-left px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+          <div class="font-medium text-gray-700 text-sm">Replace</div>
+          <div class="text-xs text-gray-500 mt-0.5">Discard current data and load the file</div>
+        </button>
+      </div>
+      <button id="import-cancel" class="btn-ghost w-full justify-center text-gray-400">Cancel</button>
+    </div>
+  `
+  document.body.appendChild(importDialog)
+
+  let pendingImportData: Uint8Array | null = null
+  const importInput = header.querySelector<HTMLInputElement>('#import-input')!
+
+  importDialog.querySelector('#import-cancel')!.addEventListener('click', () => {
+    importDialog.close()
+    importInput.value = ''
+  })
+  importDialog.addEventListener('click', (e) => {
+    if (e.target === importDialog) { importDialog.close(); importInput.value = '' }
+  })
+
+  importDialog.querySelector('#import-merge')!.addEventListener('click', async () => {
+    if (!pendingImportData) return
+    importDialog.close()
+    const stats = await db.mergeFrom(pendingImportData)
+    pendingImportData = null
+    importInput.value = ''
     recipientsPanel.refresh()
     ibansPanel.clear()
     paymentsPanel.clear()
+    showToast(`Merged: +${stats.recipients} recipients, +${stats.ibans} IBANs, +${stats.payments} payments`)
   })
+
+  importDialog.querySelector('#import-replace')!.addEventListener('click', async () => {
+    if (!pendingImportData) return
+    importDialog.close()
+    await db.importBinary(pendingImportData)
+    pendingImportData = null
+    importInput.value = ''
+    recipientsPanel.refresh()
+    ibansPanel.clear()
+    paymentsPanel.clear()
+    showToast('Database replaced successfully')
+  })
+
+  // -- Import --
+  importInput.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    const buffer = await file.arrayBuffer()
+    pendingImportData = new Uint8Array(buffer)
+    importDialog.showModal()
+  })
+}
+
+function showToast(message: string) {
+  const toast = document.createElement('div')
+  toast.className = 'fixed bottom-4 right-4 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-xl shadow-lg z-50 transition-opacity duration-300'
+  toast.textContent = message
+  document.body.appendChild(toast)
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300) }, 3000)
 }

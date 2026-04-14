@@ -175,4 +175,78 @@ export class DatabaseManager {
     this._migrateIfNeeded()
     await this.persist()
   }
+
+  async mergeFrom(data: Uint8Array): Promise<{ recipients: number; ibans: number; payments: number }> {
+    const src = new this.SQL.Database(data)
+    src.run('PRAGMA foreign_keys = ON')
+
+    // Migrate old schema in the source db if needed
+    const hasEntries = src.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
+    if (hasEntries.length) {
+      const SCHEMA = `CREATE TABLE IF NOT EXISTS recipients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS ibans (id INTEGER PRIMARY KEY AUTOINCREMENT, iban TEXT NOT NULL, recipient_id INTEGER NOT NULL, FOREIGN KEY (recipient_id) REFERENCES recipients (id) ON DELETE CASCADE, UNIQUE (iban, recipient_id));
+CREATE TABLE IF NOT EXISTS payments (id INTEGER PRIMARY KEY AUTOINCREMENT, amount REAL NOT NULL, reference TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, iban_id INTEGER NOT NULL, FOREIGN KEY (iban_id) REFERENCES ibans (id) ON DELETE CASCADE);`
+      src.run(SCHEMA)
+      const rows = src.exec('SELECT name, iban, amount, reference FROM entries')
+      if (rows.length) {
+        for (const [name, iban, amount, reference] of rows[0].values) {
+          src.run('INSERT OR IGNORE INTO recipients (name) VALUES (?)', [name])
+          const recId = src.exec('SELECT id FROM recipients WHERE name = ?', [name])[0].values[0][0]
+          src.run('INSERT OR IGNORE INTO ibans (iban, recipient_id) VALUES (?, ?)', [iban, recId])
+          const ibanId = src.exec('SELECT id FROM ibans WHERE iban = ? AND recipient_id = ?', [iban, recId])[0].values[0][0]
+          src.run('INSERT INTO payments (amount, reference, iban_id) VALUES (?, ?, ?)', [amount, reference ?? null, ibanId])
+        }
+      }
+      src.run('DROP TABLE entries')
+    }
+
+    let addedRecipients = 0, addedIbans = 0, addedPayments = 0
+
+    const recipientRows = src.exec('SELECT id, name FROM recipients ORDER BY id')
+    if (recipientRows.length) {
+      for (const [srcRecId, name] of recipientRows[0].values) {
+        this.db.run('INSERT OR IGNORE INTO recipients (name) VALUES (?)', [name])
+        const inserted = this.db.exec('SELECT changes()')[0].values[0][0] as number
+        addedRecipients += inserted
+
+        const ourRecId = this.db.exec('SELECT id FROM recipients WHERE name = ?', [name])[0].values[0][0] as number
+
+        const ibanRows = src.exec('SELECT id, iban FROM ibans WHERE recipient_id = ?', [srcRecId])
+        if (!ibanRows.length) continue
+
+        for (const [srcIbanId, iban] of ibanRows[0].values) {
+          this.db.run('INSERT OR IGNORE INTO ibans (iban, recipient_id) VALUES (?, ?)', [iban, ourRecId])
+          const ibanInserted = this.db.exec('SELECT changes()')[0].values[0][0] as number
+          addedIbans += ibanInserted
+
+          const ourIbanId = this.db.exec('SELECT id FROM ibans WHERE iban = ? AND recipient_id = ?', [iban, ourRecId])[0].values[0][0] as number
+
+          const paymentRows = src.exec(
+            'SELECT amount, reference, created_at FROM payments WHERE iban_id = ?',
+            [srcIbanId]
+          )
+          if (!paymentRows.length) continue
+
+          for (const [amount, reference, created_at] of paymentRows[0].values) {
+            // Skip exact duplicates (same iban, amount, reference)
+            const exists = this.db.exec(
+              'SELECT COUNT(*) FROM payments WHERE iban_id = ? AND amount = ? AND reference IS ?',
+              [ourIbanId, amount, reference ?? null]
+            )[0].values[0][0] as number
+            if (!exists) {
+              this.db.run(
+                'INSERT INTO payments (amount, reference, created_at, iban_id) VALUES (?, ?, ?, ?)',
+                [amount, reference ?? null, created_at, ourIbanId]
+              )
+              addedPayments++
+            }
+          }
+        }
+      }
+    }
+
+    src.close()
+    await this.persist()
+    return { recipients: addedRecipients, ibans: addedIbans, payments: addedPayments }
+  }
 }
