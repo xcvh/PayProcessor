@@ -18,12 +18,52 @@ export class DatabaseManager {
     const manager = new DatabaseManager(db, SQL)
     if (!stored) {
       manager.db.run(SCHEMA_SQL)
-      await manager.persist()
     } else {
-      // Ensure foreign keys are on for existing db
       manager.db.run('PRAGMA foreign_keys = ON')
+      manager._migrateIfNeeded()
     }
+    await manager.persist()
     return manager
+  }
+
+  /** Migrate the legacy flat `entries` table to the normalized 3-table schema. */
+  private _migrateIfNeeded(): void {
+    const tables = this.db.exec(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='entries'"
+    )
+    if (!tables.length) return
+
+    // Ensure target tables exist
+    this.db.run(SCHEMA_SQL)
+
+    const rows = this.db.exec('SELECT name, iban, amount, reference FROM entries')
+    if (!rows.length) { this.db.run('DROP TABLE entries'); return }
+
+    for (const [name, iban, amount, reference] of rows[0].values) {
+      // Upsert recipient
+      this.db.run('INSERT OR IGNORE INTO recipients (name) VALUES (?)', [name])
+      const recResult = this.db.exec('SELECT id FROM recipients WHERE name = ?', [name])
+      const recipientId = recResult[0].values[0][0] as number
+
+      // Upsert IBAN
+      this.db.run(
+        'INSERT OR IGNORE INTO ibans (iban, recipient_id) VALUES (?, ?)',
+        [iban, recipientId]
+      )
+      const ibanResult = this.db.exec(
+        'SELECT id FROM ibans WHERE iban = ? AND recipient_id = ?',
+        [iban, recipientId]
+      )
+      const ibanId = ibanResult[0].values[0][0] as number
+
+      // Insert payment
+      this.db.run(
+        'INSERT INTO payments (amount, reference, iban_id) VALUES (?, ?, ?)',
+        [amount, reference ?? null, ibanId]
+      )
+    }
+
+    this.db.run('DROP TABLE entries')
   }
 
   private async persist(): Promise<void> {
@@ -132,6 +172,7 @@ export class DatabaseManager {
     this.db.close()
     this.db = new this.SQL.Database(data)
     this.db.run('PRAGMA foreign_keys = ON')
+    this._migrateIfNeeded()
     await this.persist()
   }
 }
