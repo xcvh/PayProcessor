@@ -2,6 +2,15 @@ import type { DatabaseManager } from '../db/manager'
 import type { Payment, IBAN, Recipient } from '../models/types'
 import type { createQrModal } from './qr-modal'
 
+export interface PaymentContext {
+  recipientName: string
+  iban: string
+}
+
+interface AddPaymentDialog extends HTMLDialogElement {
+  showContext: (ctx: PaymentContext | null) => void
+}
+
 function formatDate(ts: string): string {
   try {
     return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -10,13 +19,18 @@ function formatDate(ts: string): string {
   }
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function createAddPaymentDialog(
   onAdd: (amount: number, reference: string) => Promise<void>
-): HTMLDialogElement {
+): AddPaymentDialog {
   const dialog = document.createElement('dialog')
   dialog.innerHTML = `
     <div class="p-6 space-y-4">
       <h2 class="text-lg font-semibold text-gray-900">New Payment</h2>
+      <div id="pay-context" class="bg-gray-50 rounded-xl p-3 space-y-1 text-sm"></div>
       <div class="space-y-3">
         <div>
           <label class="block text-xs font-medium text-gray-600 mb-1">Amount (EUR)</label>
@@ -35,10 +49,29 @@ function createAddPaymentDialog(
     </div>
   `
 
+  const contextEl = dialog.querySelector<HTMLElement>('#pay-context')!
   const amountInput = dialog.querySelector<HTMLInputElement>('#pay-amount')!
   const refInput = dialog.querySelector<HTMLInputElement>('#pay-ref')!
   const errorEl = dialog.querySelector<HTMLElement>('#pay-error')!
   const submitBtn = dialog.querySelector<HTMLButtonElement>('#pay-submit')!
+
+  ;(dialog as AddPaymentDialog).showContext = (ctx: PaymentContext | null) => {
+    if (ctx) {
+      contextEl.innerHTML = `
+        <div class="flex items-baseline gap-2">
+          <span class="text-xs text-gray-400 w-16 shrink-0">To</span>
+          <span class="font-medium text-gray-800 truncate">${escapeHtml(ctx.recipientName)}</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-xs text-gray-400 w-16 shrink-0">IBAN</span>
+          <span class="font-mono text-gray-700 text-xs break-all">${escapeHtml(ctx.iban)}</span>
+        </div>
+      `
+      contextEl.classList.remove('hidden')
+    } else {
+      contextEl.classList.add('hidden')
+    }
+  }
 
   const showError = (msg: string) => {
     errorEl.textContent = msg
@@ -68,7 +101,7 @@ function createAddPaymentDialog(
   amountInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click() })
   refInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click() })
 
-  return dialog
+  return dialog as AddPaymentDialog
 }
 
 export function createPaymentsPanel(
@@ -200,6 +233,7 @@ export function createPaymentsPanel(
     payments = db.getPaymentsForIban(iban.id)
     addBtn.classList.remove('hidden')
     render()
+    addDialog.showContext({ recipientName: recipient.name, iban: iban.iban })
   }
 
   const clear = () => {
@@ -209,6 +243,7 @@ export function createPaymentsPanel(
     payments = []
     addBtn.classList.add('hidden')
     render()
+    addDialog.showContext(null)
   }
 
   const prefillAndOpen = (amount: number, reference: string) => {
