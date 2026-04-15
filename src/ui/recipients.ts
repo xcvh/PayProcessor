@@ -70,7 +70,7 @@ export function createRecipientsPanel(
   db: DatabaseManager,
   onRecipientSelected: (recipient: Recipient) => void,
   onRecipientDeselected: () => void
-): { element: HTMLElement; refresh: () => void; selectById: (id: number) => void } {
+): { element: HTMLElement; refresh: () => void; selectById: (id: number) => void; openAddDialog: (prefillName?: string, onAdded?: (id: number) => void) => void } {
   const panel = document.createElement('div')
   panel.className = 'panel w-[480px] shrink-0'
   panel.innerHTML = `
