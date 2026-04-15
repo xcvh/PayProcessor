@@ -6,12 +6,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['sql.js'],
   },
-  build: {
-    rollupOptions: {
-      input: {
-        main: './index.html',
-        pay: './pay.html',
-      },
-    },
-  },
+  build: {},
 })

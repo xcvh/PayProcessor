@@ -78,6 +78,7 @@ export function createPaymentsPanel(
   element: HTMLElement
   load: (iban: IBAN, recipient: Recipient) => void
   clear: () => void
+  prefillAndOpen: (amount: number, reference: string) => void
 } {
   const panel = document.createElement('div')
   panel.className = 'panel flex-1'
@@ -210,5 +211,16 @@ export function createPaymentsPanel(
     render()
   }
 
-  return { element: panel, load, clear }
+  const prefillAndOpen = (amount: number, reference: string) => {
+    if (!currentIban) return
+    const amountInput = addDialog.querySelector<HTMLInputElement>('#pay-amount')!
+    const refInput = addDialog.querySelector<HTMLInputElement>('#pay-ref')!
+    amountInput.value = amount > 0 ? amount.toString() : ''
+    refInput.value = reference
+    addDialog.querySelector<HTMLElement>('#pay-error')!.classList.add('hidden')
+    addDialog.showModal()
+    setTimeout(() => amountInput.focus(), 50)
+  }
+
+  return { element: panel, load, clear, prefillAndOpen }
 }

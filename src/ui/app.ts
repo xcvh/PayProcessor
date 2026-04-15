@@ -3,8 +3,9 @@ import { createRecipientsPanel } from './recipients'
 import { createIbansPanel } from './ibans'
 import { createPaymentsPanel } from './payments'
 import { createQrModal } from './qr-modal'
+import type { EpcPaymentData } from '../services/qr-generator'
 
-export function mountApp(root: HTMLElement, db: DatabaseManager) {
+export async function mountApp(root: HTMLElement, db: DatabaseManager, urlParams?: EpcPaymentData | null) {
   root.innerHTML = ''
 
   // -- Header --
@@ -79,6 +80,29 @@ export function mountApp(root: HTMLElement, db: DatabaseManager) {
 
   root.appendChild(header)
   root.appendChild(main)
+
+  if (urlParams) {
+    let recipients = db.getRecipients()
+    let recipient = recipients.find(r => r.name.toLowerCase() === urlParams.name.toLowerCase())
+    if (!recipient) {
+      const id = await db.addRecipient(urlParams.name)
+      recipient = { id, name: urlParams.name }
+      recipientsPanel.refresh()
+    }
+
+    let ibans = db.getIbansForRecipient(recipient.id)
+    let iban = ibans.find(i => i.iban.replace(/\s/g, '') === urlParams.iban.replace(/\s/g, ''))
+    if (!iban) {
+      const id = await db.addIban(urlParams.iban, recipient.id)
+      iban = { id, iban: urlParams.iban, recipient_id: recipient.id }
+    }
+
+    ibansPanel.load({ id: recipient.id, name: recipient.name })
+
+    if (urlParams.amount > 0 || urlParams.reference) {
+      paymentsPanel.prefillAndOpen(urlParams.amount, urlParams.reference ?? '')
+    }
+  }
 
   // -- Export --
   header.querySelector('#export-btn')!.addEventListener('click', () => {

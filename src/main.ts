@@ -3,10 +3,10 @@ import initSqlJs from 'sql.js'
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
 import { DatabaseManager } from './db/manager'
 import { mountApp } from './ui/app'
+import type { EpcPaymentData } from './services/qr-generator'
 
 const root = document.getElementById('app')!
 
-// Show loading state
 root.innerHTML = `
   <div class="min-h-screen flex flex-col items-center justify-center gap-4">
     <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center animate-pulse">
@@ -18,11 +18,22 @@ root.innerHTML = `
   </div>
 `
 
+function parseUrlParams(): EpcPaymentData | null {
+  const p = new URLSearchParams(location.search)
+  const iban = p.get('iban')?.replace(/\s/g, '').toUpperCase() ?? ''
+  const name = p.get('name') ?? ''
+  const amount = parseFloat(p.get('amount') ?? '')
+  const reference = p.get('reference') ?? ''
+
+  if (!iban || !name) return null
+  return { iban, name, amount: isNaN(amount) ? 0 : amount, reference: reference || undefined }
+}
+
 async function init() {
   try {
     const SQL = await initSqlJs({ locateFile: () => sqlWasmUrl })
     const db = await DatabaseManager.create(SQL)
-    mountApp(root, db)
+    await mountApp(root, db, parseUrlParams())
   } catch (err) {
     root.innerHTML = `
       <div class="min-h-screen flex items-center justify-center">

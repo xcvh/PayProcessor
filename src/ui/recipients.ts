@@ -70,7 +70,7 @@ export function createRecipientsPanel(
   db: DatabaseManager,
   onRecipientSelected: (recipient: Recipient) => void,
   onRecipientDeselected: () => void
-): { element: HTMLElement; refresh: () => void } {
+): { element: HTMLElement; refresh: () => void; selectById: (id: number) => void } {
   const panel = document.createElement('div')
   panel.className = 'panel w-[480px] shrink-0'
   panel.innerHTML = `
@@ -160,5 +160,12 @@ export function createRecipientsPanel(
   })
 
   refresh()
-  return { element: panel, refresh }
+  const selectById = (id: number) => {
+    const r = recipients.find(rec => rec.id === id)
+    if (!r) return
+    selectedId = r.id
+    render()
+    onRecipientSelected(r)
+  }
+  return { element: panel, refresh, selectById }
 }
