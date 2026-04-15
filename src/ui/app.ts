@@ -82,25 +82,44 @@ export async function mountApp(root: HTMLElement, db: DatabaseManager, urlParams
   root.appendChild(main)
 
   if (urlParams) {
-    let recipients = db.getRecipients()
-    let recipient = recipients.find(r => r.name.toLowerCase() === urlParams.name.toLowerCase())
-    if (!recipient) {
-      const id = await db.addRecipient(urlParams.name)
-      recipient = { id, name: urlParams.name }
-      recipientsPanel.refresh()
-    }
+    const recipients = db.getRecipients()
+    const recipient = recipients.find(r => r.name.toLowerCase() === urlParams.name.toLowerCase())
 
-    let ibans = db.getIbansForRecipient(recipient.id)
-    let iban = ibans.find(i => i.iban.replace(/\s/g, '') === urlParams.iban.replace(/\s/g, ''))
-    if (!iban) {
-      const id = await db.addIban(urlParams.iban, recipient.id)
-      iban = { id, iban: urlParams.iban, recipient_id: recipient.id }
-    }
+    if (urlParams.iban) {
+      // Full IBAN provided: find or create recipient + IBAN, then open payment dialog
+      const r = recipient ?? { id: await db.addRecipient(urlParams.name), name: urlParams.name }
+      if (!recipient) recipientsPanel.refresh()
 
-    ibansPanel.load({ id: recipient.id, name: recipient.name })
+      const ibans = db.getIbansForRecipient(r.id)
+      const iban = ibans.find(i => i.iban.replace(/\s/g, '') === urlParams.iban.replace(/\s/g, ''))
+      if (!iban) {
+        await db.addIban(urlParams.iban, r.id)
+      }
 
-    if (urlParams.amount > 0 || urlParams.reference) {
-      paymentsPanel.prefillAndOpen(urlParams.amount, urlParams.reference ?? '')
+      ibansPanel.load({ id: r.id, name: r.name })
+
+      if (urlParams.amount > 0 || urlParams.reference) {
+        paymentsPanel.prefillAndOpen(urlParams.amount, urlParams.reference ?? '')
+      }
+    } else {
+      // No IBAN in URL: search/add hybrid
+      const openPaymentIfNeeded = () => {
+        if (urlParams.amount > 0 || urlParams.reference) {
+          paymentsPanel.prefillAndOpen(urlParams.amount, urlParams.reference ?? '')
+        }
+      }
+
+      if (recipient) {
+        // Recipient known: select them (auto-selects first IBAN), then prefill payment dialog
+        recipientsPanel.selectById(recipient.id)
+        openPaymentIfNeeded()
+      } else {
+        // Recipient unknown: open "New Recipient" dialog with name pre-filled
+        recipientsPanel.openAddDialog(urlParams.name, (newId) => {
+          recipientsPanel.selectById(newId)
+          openPaymentIfNeeded()
+        })
+      }
     }
   }
 

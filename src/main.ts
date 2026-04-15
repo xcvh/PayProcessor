@@ -25,7 +25,7 @@ function parseUrlParams(): EpcPaymentData | null {
   const amount = parseFloat(p.get('amount') ?? '')
   const reference = p.get('reference') ?? ''
 
-  if (!iban || !name) return null
+  if (!name) return null
   return { iban, name, amount: isNaN(amount) ? 0 : amount, reference: reference || undefined }
 }
 

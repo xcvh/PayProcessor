@@ -142,22 +142,29 @@ export function createRecipientsPanel(
     render()
   })
 
+  let afterAddHook: ((id: number) => void) | null = null
+
   const addDialog = createNewRecipientDialog(async (name, iban) => {
     const recipientId = await db.addRecipient(name)
     await db.addIban(iban, recipientId)
     refresh()
+    afterAddHook?.(recipientId)
+    afterAddHook = null
   })
   panel.appendChild(addDialog)
 
-  panel.querySelector('#add-recipient-btn')!.addEventListener('click', () => {
+  const openAddDialog = (prefillName?: string, onAdded?: (id: number) => void) => {
     const nameInput = addDialog.querySelector<HTMLInputElement>('#rec-name')!
     const ibanInput = addDialog.querySelector<HTMLInputElement>('#rec-iban')!
-    nameInput.value = ''
+    nameInput.value = prefillName ?? ''
     ibanInput.value = ''
     addDialog.querySelector<HTMLElement>('#rec-error')!.classList.add('hidden')
+    afterAddHook = onAdded ?? null
     addDialog.showModal()
-    setTimeout(() => nameInput.focus(), 50)
-  })
+    setTimeout(() => (prefillName ? ibanInput : nameInput).focus(), 50)
+  }
+
+  panel.querySelector('#add-recipient-btn')!.addEventListener('click', () => openAddDialog())
 
   refresh()
   const selectById = (id: number) => {
@@ -167,5 +174,5 @@ export function createRecipientsPanel(
     render()
     onRecipientSelected(r)
   }
-  return { element: panel, refresh, selectById }
+  return { element: panel, refresh, selectById, openAddDialog }
 }
