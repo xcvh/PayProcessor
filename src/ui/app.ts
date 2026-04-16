@@ -88,15 +88,20 @@ export async function mountApp(root: HTMLElement, db: DatabaseManager, urlParams
     if (urlParams.iban) {
       // Full IBAN provided: find or create recipient + IBAN, then open payment dialog
       const r = recipient ?? { id: await db.addRecipient(urlParams.name), name: urlParams.name }
-      if (!recipient) recipientsPanel.refresh()
+      if (!recipient) recipientsPanel.refresh() // ensure the new recipient is in the list
 
-      const ibans = db.getIbansForRecipient(r.id)
-      const iban = ibans.find(i => i.iban.replace(/\s/g, '') === urlParams.iban.replace(/\s/g, ''))
-      if (!iban) {
-        await db.addIban(urlParams.iban, r.id)
+      let ibans = db.getIbansForRecipient(r.id)
+      let targetIban = ibans.find(i => i.iban.replace(/\s/g, '') === urlParams.iban.replace(/\s/g, ''))
+      if (!targetIban) {
+        const id = await db.addIban(urlParams.iban, r.id)
+        targetIban = { id, iban: urlParams.iban, recipient_id: r.id }
+        ibans = db.getIbansForRecipient(r.id) // reload so ibansPanel sees the new entry
       }
 
-      ibansPanel.load({ id: r.id, name: r.name })
+      // selectById highlights the recipient + triggers ibansPanel.load (auto-selects first IBAN)
+      recipientsPanel.selectById(r.id)
+      // then pin to the exact IBAN from the URL (may differ from the first)
+      ibansPanel.selectIbanById(targetIban.id)
 
       if (urlParams.amount > 0 || urlParams.reference) {
         paymentsPanel.prefillAndOpen(urlParams.amount, urlParams.reference ?? '')

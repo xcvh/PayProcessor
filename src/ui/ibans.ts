@@ -66,6 +66,7 @@ export function createIbansPanel(
   element: HTMLElement
   load: (recipient: Recipient) => void
   clear: () => void
+  selectIbanById: (id: number) => void
 } {
   const panel = document.createElement('div')
   panel.className = 'panel flex-1'
@@ -176,5 +177,13 @@ export function createIbansPanel(
     render()
   }
 
-  return { element: panel, load, clear }
+  const selectIbanById = (id: number) => {
+    const ib = ibans.find(i => i.id === id)
+    if (!ib || !currentRecipient) return
+    selectedId = ib.id
+    render()
+    onIbanSelected(ib, currentRecipient)
+  }
+
+  return { element: panel, load, clear, selectIbanById }
 }
