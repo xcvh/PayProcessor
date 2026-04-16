@@ -1,5 +1,6 @@
 import type { DatabaseManager } from '../db/manager'
 import type { IBAN, Recipient } from '../models/types'
+import { isValidIban } from '../services/iban'
 
 function createAddIbanDialog(onAdd: (iban: string) => Promise<void>): HTMLDialogElement {
   const dialog = document.createElement('dialog')
@@ -34,7 +35,7 @@ function createAddIbanDialog(onAdd: (iban: string) => Promise<void>): HTMLDialog
   submitBtn.addEventListener('click', async () => {
     errorEl.classList.add('hidden')
     const iban = input.value.replace(/\s/g, '').toUpperCase()
-    if (iban.length < 15) { showError('Please enter a valid IBAN.'); return }
+    if (!isValidIban(iban)) { showError('Please enter a valid IBAN.'); return }
     submitBtn.disabled = true
     submitBtn.textContent = 'Adding...'
     try {

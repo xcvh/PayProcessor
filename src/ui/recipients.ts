@@ -1,5 +1,6 @@
 import type { DatabaseManager } from '../db/manager'
 import type { Recipient } from '../models/types'
+import { isValidIban } from '../services/iban'
 
 function createNewRecipientDialog(
   onAdd: (name: string, iban: string) => Promise<void>
@@ -45,7 +46,7 @@ function createNewRecipientDialog(
     const name = nameInput.value.trim()
     const iban = ibanInput.value.replace(/\s/g, '').toUpperCase()
     if (!name) { showError('Please enter a recipient name.'); return }
-    if (iban.length < 15) { showError('Please enter a valid IBAN.'); return }
+    if (!isValidIban(iban)) { showError('Please enter a valid IBAN.'); return }
     submitBtn.disabled = true
     submitBtn.textContent = 'Adding...'
     try {
