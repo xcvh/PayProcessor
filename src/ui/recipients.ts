@@ -130,6 +130,8 @@ export function createRecipientsPanel(
       })
       body.appendChild(el)
     })
+    // Scroll selected item into view (no-op if already visible)
+    body.querySelector<HTMLElement>('.list-item.selected')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }
 
   const refresh = () => {

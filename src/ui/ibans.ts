@@ -72,7 +72,10 @@ export function createIbansPanel(
   panel.className = 'panel flex-1'
   panel.innerHTML = `
     <div class="panel-header">
-      <span class="panel-title">IBANs</span>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="panel-title">IBANs</span>
+        <span id="iban-recipient-name" class="text-sm font-medium text-gray-700 truncate hidden"></span>
+      </div>
       <button id="add-iban-btn" class="btn-primary hidden" title="Add IBAN">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
@@ -94,6 +97,7 @@ export function createIbansPanel(
 
   const body = panel.querySelector<HTMLElement>('#ibans-body')!
   const addBtn = panel.querySelector<HTMLButtonElement>('#add-iban-btn')!
+  const recipientNameEl = panel.querySelector<HTMLElement>('#iban-recipient-name')!
 
   const render = () => {
     body.innerHTML = ''
@@ -158,6 +162,8 @@ export function createIbansPanel(
     selectedId = null
     ibans = db.getIbansForRecipient(recipient.id)
     addBtn.classList.remove('hidden')
+    recipientNameEl.textContent = recipient.name
+    recipientNameEl.classList.remove('hidden')
     render()
     if (ibans.length > 0) {
       selectedId = ibans[0].id
@@ -173,6 +179,8 @@ export function createIbansPanel(
     selectedId = null
     ibans = []
     addBtn.classList.add('hidden')
+    recipientNameEl.textContent = ''
+    recipientNameEl.classList.add('hidden')
     onIbanDeselected()
     render()
   }
