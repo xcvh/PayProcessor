@@ -212,7 +212,16 @@ export function createPaymentsPanel(
     if (!currentIban) throw new Error('No IBAN selected')
     await db.addPayment(amount, reference, currentIban.id)
     payments = db.getPaymentsForIban(currentIban.id)
+    const newPayment = payments[0] // sorted DESC — newest is first
+    if (newPayment) selectedId = newPayment.id
     render()
+    if (newPayment && currentRecipient) {
+      await qrModal.show(
+        { name: currentRecipient.name, iban: currentIban.iban, amount: newPayment.amount, reference: newPayment.reference },
+        currentRecipient.name,
+        currentIban.iban
+      )
+    }
   })
   panel.appendChild(addDialog)
 
