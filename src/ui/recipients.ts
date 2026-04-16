@@ -150,6 +150,7 @@ export function createRecipientsPanel(
     const recipientId = await db.addRecipient(name)
     await db.addIban(iban, recipientId)
     refresh()
+    selectById(recipientId)
     afterAddHook?.(recipientId)
     afterAddHook = null
   })
